@@ -2,9 +2,6 @@ name: Build and push Discord AI Chatbot Docker image
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
   pull_request:
     branches: [ main ]
 
