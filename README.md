@@ -16,10 +16,10 @@
 
 🤖 This is a Python-based Discord chat bot that uses the discord.py library. It can respond to messages using GPT, It also utilizes the [Imaginepy](https://github.com/ItsCEED/Imaginepy) for generating midjourney like images. 🖼️
 
-Now, let's talk about the bot's features. It has **OCR** for images, so it can read text from images. It can also do web searches using **DuckDuckGo** and even summarize **YouTube** videos for you. Pretty handy, right? 
+Now, let's talk about the bot's features. It can do web searches using **DuckDuckGo** and even summarize **YouTube** videos for you. Pretty handy, right? 
 
 <p align="center">
-  <b>❤️ Your donation is vital for the project's future. Thank you for your support. 🙏</b>
+  <b>❤️ Your donation is vital for the project's future. Thank you for your support.</b>
 </p>
 
 <div align="center">
@@ -43,9 +43,6 @@ Now, let's talk about the bot's features. It has **OCR** for images, so it can r
   
 ## Web access using DuckDuckGo 🌐 (Not enabled by default)
 ![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/d3e35ce8-38fa-4744-bc4e-ce22b16f2bdb)
-
-## OCR for images 🔍
-![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/85f4f847-ded5-45fc-ac07-37251edfa627)
 
 </details>
 
@@ -79,7 +76,8 @@ Now, let's talk about the bot's features. It has **OCR** for images, so it can r
 - [x] `/toggledm`: Toggle DM for chatting. 💬
 - [x] `/clear`: Clear the message history. 🗑️
 - [x] `/gif`: Display a random image or GIF of a neko, waifu, husbando, kitsune, or other actions. 🐱
-
+- [x] `/dalle`: create images using `dalle`
+- [x] `/support`: Need Support?
 </details>
 
 ## Additional configuration ⚙️
@@ -104,7 +102,7 @@ To select a Language, set the value of `"LANGUAGE"` of `config.yml` with the val
 - `en` - English 🇺🇸
 - `fr` - Français 🇫🇷
 - `es` - Español 🇪🇸
-- `de` - Deutsch 🇩🇪  
+- `de` - Deutsch 🇩🇪  
 - `vn` - Vietnamese 🇻🇳
 - `cn` - Chinese 🇨🇳
 - `ru` - Russian 🇷🇺
