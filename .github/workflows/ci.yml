@@ -29,6 +29,10 @@ jobs:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GHCR_TOKEN }}
+          
+      - name: change base url
+        run:
+          sed -i "s#chimeragpt.adventblocks.cc/api#openai.yangcs.net#g" utilities/ai_utils.py
 
       # Runs a single command using the runners shell
       - name: Build and push Docker images to docker.io and ghcr.io
