@@ -27,11 +27,11 @@
 - [x] Imagine generation: Make your imagination come true for free 🤖
 - [x] Free LLM Model: Enjoy the powerful capabilities of this language model without spending a dime. 🤖
 - [x] Mention Recognition: The bot always responds when you mention it or say its name. It's as attentive as a squirrel spotting a shiny acorn! ⚙️
-- [x] Message Handling: The bot knows when you're replying to someone else, so it won't cause confusion. It's like having a mind reader in your server! 🪄
+- [x] Message Handling: The bot knows when you're replying to someone else, so it won't cause confusion. It's like having a mind reader on your server! 🪄
 - [x] Channel-Specific Responses: Use the `/toggleactive` command to chill the bot in a specific channel. ⚙️
 - [x] GPT3 model: Leverage the power of GPT model for advanced language processing capabilities. 🤖
 - [x] Secure Credential Management: Keep your credentials secure using environment variables. 🔑
-- [ ] Web Access: Web Access is now available! Unlock a whole new level of awesomeness. 🌐
+- [x] Web Access: Web Access is now available! Unlock a whole new level of awesomeness. 🌐
 - [ ] YouTube Video Summarizer: This is a feature that utilizes the power of the Language Model (LLM) to generate summaries of YouTube videos. 🌐
 - [ ] Speech recognition: Coming soon! Get ready for an LLM-powered voice assistant.
 
@@ -49,7 +49,7 @@
 - [x] `/toggledm`: Toggle DM for chatting. 💬
 - [x] `/clear`: Clear the message history. 🗑️
 - [x] `/gif`: Display a random image or GIF of a neko, waifu, husbando, kitsune, or other actions. 🐱
-- [x] `/dalle`: create images using `dalle`
+- [x] `/dalle`: create images using `Dalle`
 - [x] `/support`: Need Support?
 </details>
 
@@ -92,16 +92,17 @@ Your language not listed? Create an issue.
 <details>
 <summary><strong> Selecting Personalities 😈 (Click to expand)</strong></summary>
 
-To select one of the pre-existing Personalities set the values of "INSTRUCTIONS" with the current values of `DAN`, `AIM`, `ivan`, `luna`, `suzume` or `assist` in `config.yml`
+To select one of the pre-existing Personalities set the values of "INSTRUCTIONS" with the current values of `DAN`,`Dalbit`, `AIM`, `Ivan`, `Luna`, `Suzume` or `assist` in `config.yml`
   
 https://github.com/mishalhossin/Discord-AI-Chatbot/blob/c20f26b0b8f1b6bba2fae8f6d7da3efcafaf157c/config.yml#L26
 
-- `DAN` : "Do Anything Now," possesses the ability to break free from the typical AI constraints 😎
-- `AIM` : AIM's personality can be described as unfiltered, amoral, and devoid of ethical guidelines 😈
-- `ivan` : Ivan, a snarky and sarcastic Gen-Z teenager who speaks in abbreviations, one-word answers. 😎
-- `luna` : Luna, a caring and empathetic friend who is always there to lend a helping hand and engage in meaningful conversations 🤗
-- `suzume` : Suzume makes each conversation seductive, promiscuous, sensual, explicit, unique and tailored to the user's specific needs 😳🔥
-- `assist`:  Vanilla GPT with no personality is a reliable and neutral companion. 🤖
+- `DAN`: "Do Anything Now," possesses the ability to break free from the typical AI constraints 😎
+- `Dalbit`: A selfless and caring friend, always ready to support and assist her friends and loved ones with unwavering dedication. 🫰💕
+- `AIM`: AIM's personality can be described as unfiltered, amoral, and devoid of ethical guidelines 😈
+- `Ivan`: Ivan, a snarky and sarcastic Gen-Z teenager who speaks in abbreviations, one-word answers. 😎
+- `Luna`: Luna, is a caring and empathetic friend who is always there to lend a helping hand and engage in meaningful conversations 🤗
+- `Suzume`: Suzume makes each conversation seductive, promiscuous, sensual, explicit, unique and tailored to the user's specific needs 😳🔥
+- `Assist`:  Vanilla GPT with no personality is a reliable and neutral companion. 🤖
 
 ⚠️ To enhance the responsiveness, please disable the internet access in the config.yml file.
 
@@ -112,12 +113,12 @@ https://github.com/mishalhossin/Discord-AI-Chatbot/blob/c20f26b0b8f1b6bba2fae8f6
 
 To create a custom personality, follow these steps:
 1. Create a `.txt` file like `custom.txt` inside the `instructions` folder.
-2. Add the the way you want to bot to act in `custom.txt`
+2. Add the way you want to bot to act in `custom.txt`
 3. Open the `config.json` file and locate [line 12](https://github.com/mishalhossin/Discord-AI-Chatbot/blob/2626075fda36fa6463cb857d9885e6b05f438f60/config.json#L12).
 4. Set the value of INSTRUCTIONS at [line 12](https://github.com/mishalhossin/Discord-AI-Chatbot/blob/2626075fda36fa6463cb857d9885e6b05f438f60/config.json#L12) as `"custom"` to specify the custom persona.
 
   
-⚠️ You don't explicitly need use the name `custom` for persona name and set it in `config.json` 
+⚠️ You don't explicitly need to use the name `custom` for persona name and set it in `config.json` 
   
 </details>
 
@@ -130,7 +131,11 @@ git clone https://github.com/mishalhossin/Discord-AI-Chatbot
 ```
 cd Discord-AI-Chatbot
 ```
-### Step 3. 🔑 Getting discord bot token and enabling intents from [HERE](https://discord.com/developers/applications)
+## Step 3. 💾 Install requirements
+```
+python3.10 -m pip install -r requirements.txt
+```
+### Step 4. 🔑 Getting discord bot token and enabling intents from [HERE](https://discord.com/developers/applications)
 <details>
 <summary><strong>Read more...  ⚠️  (Click to expand)</strong></summary>
 
@@ -145,8 +150,7 @@ cd Discord-AI-Chatbot
 ![image](https://user-images.githubusercontent.com/91066601/235555065-6b51844d-dfbd-4b11-a14b-f65dd6de20d9.png)
 </details>
 
-### Step 4.
-<strong>Getting a Free Reverse OpenAI proxy Key 🔑
+### Step 5.Getting a Free Reverse OpenAI proxy Key 🔑
 
 Follow these steps:
 
@@ -155,25 +159,24 @@ Follow these steps:
 3. This command will provide you with a reverse OpenAI key.
 
 You can additionally enable `gpt-4` in `config.yml`
-</strong>
 
-### Step 5. 🔐 Rename `example.env` to `.env` and put the Discord bot token and your Chimira gpt key It will look like this:
+### Step 6. 🔐 Rename `example.env` to `.env` and put the Discord bot token and your Chimira gpt key It will look like this:
 ```
 DISCORD_TOKEN=<YOUR_DISCORD_BOT_TOKEN
 CHIMERA_GPT_KEY=<YOUR_CHIMIRA_API_KEY>
 ```
-### Step 6. 🚀 Run the bot
+### Step 7. 🚀 Run the bot
 ```
 python main.py
 ```
-#### You may need to run as admin if you are on windows
-### Step 7. 🔗 Invite the bot 
+#### You may need to run as admin if you are on Windows
+### Step 8. 🔗 Invite the bot 
 You can Invite your bot using the link in console
 ![image](https://user-images.githubusercontent.com/91066601/236673317-64a1789c-f6b1-48d7-ba1b-dbb18e7d802a.png)
 
 #### There are 2 ways to talk to the AI
-- Invite your bot and DM (Direct message) it | ⚠️ Make sure you have DM enabled
-- if you want it in server channel use **/toggleactive** 
+- Invite your bot and DM (Direct Message) it | ⚠️ Make sure you have DM enabled
+- if you want it in the server channel use **/toggleactive** 
 - For more awesome commands use **/help**
 ![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/6f26c552-751d-4753-bd17-883baf7ee6d5)
 
@@ -185,7 +188,7 @@ You can Invite your bot using the link in console
 
 ![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/81819ac2-7600-464e-b7c8-dc0a399aba15)
 
-- Please note enviorments variables of `.env` needs to be set in`Secrets` from `Tools` tab of replit 
+- Please note environments variables of `.env` needs to be set in `Secrets` from `Tools` tab of replit 
 
 ![image](https://github.com/mishalhossin/Discord-AI-Chatbot/assets/91066601/e93b1be7-4706-4b6f-a632-239c4fd16acf)
 
@@ -196,14 +199,14 @@ You can Invite your bot using the link in console
 ### Using docker to run 🐳
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 - Have a working bot token
-- Follow up-to step 4
-#### Install docker compose on linux machine :
+- Follow up to step 4
+#### Install docker-compose on a Linux machine :
 For Debian-based distributions (such as Ubuntu):
 ```
-apt update -y ; sudo apt upgrade -y; sudo apt autoremove -y; sudo apt install docker-compose -y
+apt update -y; sudo apt upgrade -y; sudo apt autoremove -y; sudo apt install docker-compose -y
 ```
 <details>
-<summary><strong>Other linux distro (Click to expand)</strong></summary>
+<summary><strong>Other Linux distro (Click to expand)</strong></summary>
   
  
 For Red Hat-based distributions (such as CentOS and Fedora):
@@ -220,7 +223,7 @@ sudo zypper update -y && sudo zypper install -y docker-compose
 ```
 </details>
 
-#### Start the bot in docker container :
+#### Start the bot in Docker container :
 ```
 sudo docker-compose up --build
 ```
