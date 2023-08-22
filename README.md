@@ -10,12 +10,6 @@
   </a>
 </div>
 
-<div align="center">
-<p align="center">
-  <b>❤️ Your donation is vital for the project's future. Thank you for your support.</b>
-</p>
-</div>
-
 ## Features and commands 🌟
 
 </details>
@@ -73,6 +67,7 @@ To select a Language, set the value of `"LANGUAGE"` of `config.yml` with the val
 
 - `tr` - Türkçe 🇹🇷  
 - `en` - English 🇺🇸
+- `ar` - Arabic 🇦🇪
 - `fr` - Français 🇫🇷
 - `es` - Español 🇪🇸
 - `de` - Deutsch 🇩🇪  
@@ -154,7 +149,7 @@ python3.10 -m pip install -r requirements.txt
 
 Follow these steps:
 
-1. Join the Discord server by clicking on the following invite link: [CHIMERA GPT](https://discord.gg/chimeragpt)
+1. Join the Discord server by clicking on the following invite link: [CHIMERA GPT](https://discord.gg/2DmMUVSvSh)
 2. Once you have joined the server, run the `/key get` command in any text channel.
 3. This command will provide you with a reverse OpenAI key.
 

@@ -5,6 +5,7 @@ from itertools import cycle
 import datetime
 import json
 
+import requests
 import aiohttp
 import discord
 import random
@@ -13,7 +14,7 @@ from discord import Embed, app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from utilities.ai_utils import generate_response, generate_image_prodia, search, poly_image_gen, generate_gpt4_response, dall_e_gen
+from utilities.ai_utils import generate_response, generate_image_prodia, search, poly_image_gen, generate_gpt4_response, dall_e_gen, sdxl
 from utilities.response_util import split_response, translate_to_en, get_random_prompt
 from utilities.discord_util import check_token, get_discord_token
 from utilities.config_loader import config, load_current_language, load_instructions
@@ -41,7 +42,7 @@ active_channels = set()
 trigger_words = config['TRIGGER']
 smart_mention = config['SMART_MENTION']
 presences = config["PRESENCES"]
-
+presences_disabled = config["DISABLE_PRESENCE"]
 # Imagine config
 blacklisted_words = config['BLACKLIST_WORDS']
 prevent_nsfw = config['AI_NSFW_CONTENT_FILTER']
@@ -51,23 +52,28 @@ current_language = load_current_language()
 instruction = {}
 load_instructions(instruction)
 
-model_blob = \
-"""
-GPT-4 (gpt-4)
-GPT-4-0613 (gpt-4-0613)
-GPT-3.5 Turbo (gpt-3.5-turbo)
-GPT-3.5 Turbo OpenAI (gpt-3.5-turbo-openai)
-GPT-3.5 Turbo 16k (gpt-3.5-turbo-16k)
-GPT-3.5 Turbo 16k OpenAI (gpt-3.5-turbo-16k-openai)
-GPT-4 Poe (gpt-4-poe)
-GPT-3.5 Turbo Poe (gpt-3.5-turbo-poe)
-Sage (sage)
-Claude Instant (claude-instant)
-Claude+ (claude+)
-Claude Instant 100k (claude-instant-100k)
-Bard (bard)
-Chat Bison 001 (chat-bison-001)
-"""
+CHIMERA_GPT_KEY = os.getenv('CHIMERA_GPT_KEY')
+
+def fetch_chat_models():
+    models = []
+    headers = {
+        'Authorization': f'Bearer {CHIMERA_GPT_KEY}',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.get('https://chimeragpt.adventblocks.cc/api/v1/models', headers=headers)
+    if response.status_code == 200:
+        ModelsData = response.json()
+        for model in ModelsData.get('data'):
+            if "chat" in model['endpoints'][0]:
+                models.append(model['id'])
+    else:
+        print(f"Failed to fetch chat models. Status code: {response.status_code}")
+        
+    return models
+
+chat_models = fetch_chat_models()
+model_blob = "\n".join(chat_models)
 
 @bot.event
 async def on_ready():
@@ -84,12 +90,15 @@ async def on_ready():
     print()
     print(f"\033[1;38;5;202mAvailable models: {model_blob}\033[0m")
     print(f"\033[1;38;5;46mCurrent model: {config['GPT_MODEL']}\033[0m")
-    while True:
-        presence = next(presences_cycle)
-        presence_with_count = presence.replace("{guild_count}", str(len(bot.guilds)))
-        delay = config['PRESENCES_CHANGE_DELAY']
-        await bot.change_presence(activity=discord.Game(name=presence_with_count))
-        await asyncio.sleep(delay)
+    if presences_disabled:
+        return
+    else:
+        while True:
+            presence = next(presences_cycle)
+            presence_with_count = presence.replace("{guild_count}", str(len(bot.guilds)))
+            delay = config['PRESENCES_CHANGE_DELAY']
+            await bot.change_presence(activity=discord.Game(name=presence_with_count))
+            await asyncio.sleep(delay)
 
  
 # Set up the instructions
@@ -276,6 +285,7 @@ async def clear(ctx):
     app_commands.Choice(name='🔍 DDIM', value='DDIM')
 ])
 @app_commands.choices(model=[
+    app_commands.Choice(name='🙂 SDXL (The best of the best)', value='sdxl'),
     app_commands.Choice(name='🌈 Elldreth vivid mix (Landscapes, Stylized characters, nsfw)', value='ELLDRETHVIVIDMIX'),
     app_commands.Choice(name='💪 Deliberate v2 (Anything you want, nsfw)', value='DELIBERATE'),
     app_commands.Choice(name='🔮 Dreamshaper (HOLYSHIT this so good)', value='DREAMSHAPER_6'),
@@ -320,8 +330,10 @@ async def imagine(ctx, prompt: str, model: app_commands.Choice[str], sampler: ap
     if is_nsfw and not ctx.channel.nsfw:
         await ctx.send(f"⚠️ You can create NSFW images in NSFW channels only\n To create NSFW image first create a age ristricted channel ", delete_after=30)
         return
-        
-    imagefileobj = await generate_image_prodia(prompt, model_uid, sampler.value, seed, negative)
+    if model_uid=="sdxl":
+        imagefileobj = sdxl(prompt)
+    else:
+        imagefileobj = await generate_image_prodia(prompt, model_uid, sampler.value, seed, negative)
     
     if is_nsfw:
         img_file = discord.File(imagefileobj, filename="image.png", spoiler=True, description=prompt)
@@ -349,6 +361,16 @@ async def imagine(ctx, prompt: str, model: app_commands.Choice[str], sampler: ap
 
 @bot.hybrid_command(name="imagine-dalle", description="Create images using DALL-E")
 @commands.guild_only()
+@app_commands.choices(model=[
+     app_commands.Choice(name='SDXL', value='sdxl'),
+     app_commands.Choice(name='Kandinsky 2.2', value='kandinsky-2.2'),
+     app_commands.Choice(name='Kandinsky 2', value='kandinsky-2'),
+     app_commands.Choice(name='Dall-E', value='dall-e'),
+     app_commands.Choice(name='Stable Diffusion 2.1', value='stable-diffusion-2.1'),
+     app_commands.Choice(name='Stable Diffusion 1.5', value='stable-diffusion-1.5'),
+     app_commands.Choice(name='Deepfloyd', value='deepfloyd-if'),
+     app_commands.Choice(name='Material Diffusion', value='material-diffusion')
+])
 @app_commands.choices(size=[
      app_commands.Choice(name='🔳 Small', value='256x256'),
      app_commands.Choice(name='🔳 Medium', value='512x512'),
@@ -358,12 +380,13 @@ async def imagine(ctx, prompt: str, model: app_commands.Choice[str], sampler: ap
      prompt="Write a amazing prompt for a image",
      size="Choose the size of the image"
 )
-async def imagine_dalle(ctx, prompt, size: app_commands.Choice[str], num_images : int = 1):
+async def imagine_dalle(ctx, prompt, model: app_commands.Choice[str], size: app_commands.Choice[str], num_images : int = 1):
     await ctx.defer()
+    model = model.value
     size = size.value
     if num_images > 4:
         num_images = 4
-    imagefileobjs = await dall_e_gen(prompt, size, num_images)
+    imagefileobjs = await dall_e_gen(model, prompt, size, num_images)
     await ctx.send(f'🎨 Generated Image by {ctx.author.name}')
     for imagefileobj in imagefileobjs:
         file = discord.File(imagefileobj, filename="image.png", spoiler=True, description=prompt)
