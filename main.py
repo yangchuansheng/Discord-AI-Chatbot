@@ -14,12 +14,12 @@ from discord import Embed, app_commands
 from discord.ext import commands
 from dotenv import load_dotenv
 
-from utilities.ai_utils import generate_response, generate_image_prodia, search, poly_image_gen, generate_gpt4_response, dall_e_gen, sdxl
-from utilities.response_util import split_response, translate_to_en, get_random_prompt
-from utilities.discord_util import check_token, get_discord_token
-from utilities.config_loader import config, load_current_language, load_instructions
-from utilities.replit_detector import detect_replit
-from utilities.sanitization_utils import sanitize_prompt
+from bot_utilities.ai_utils import generate_response, generate_image_prodia, search, poly_image_gen, generate_gpt4_response, dall_e_gen, sdxl
+from bot_utilities.response_util import split_response, translate_to_en, get_random_prompt
+from bot_utilities.discord_util import check_token, get_discord_token
+from bot_utilities.config_loader import config, load_current_language, load_instructions
+from bot_utilities.replit_detector import detect_replit
+from bot_utilities.sanitization_utils import sanitize_prompt
 from model_enum import Model
 load_dotenv()
 
@@ -61,15 +61,17 @@ def fetch_chat_models():
         'Content-Type': 'application/json'
     }
 
-    response = requests.get('https://chimeragpt.adventblocks.cc/api/v1/models', headers=headers)
+    response = requests.get('https://api.naga.ac/v1/models', headers=headers)
     if response.status_code == 200:
         ModelsData = response.json()
-        for model in ModelsData.get('data'):
-            if "chat" in model['endpoints'][0]:
-                models.append(model['id'])
+        models.extend(
+            model['id']
+            for model in ModelsData.get('data')
+            if "max_images" not in model
+        )
     else:
         print(f"Failed to fetch chat models. Status code: {response.status_code}")
-        
+
     return models
 
 chat_models = fetch_chat_models()
@@ -92,13 +94,12 @@ async def on_ready():
     print(f"\033[1;38;5;46mCurrent model: {config['GPT_MODEL']}\033[0m")
     if presences_disabled:
         return
-    else:
-        while True:
-            presence = next(presences_cycle)
-            presence_with_count = presence.replace("{guild_count}", str(len(bot.guilds)))
-            delay = config['PRESENCES_CHANGE_DELAY']
-            await bot.change_presence(activity=discord.Game(name=presence_with_count))
-            await asyncio.sleep(delay)
+    while True:
+        presence = next(presences_cycle)
+        presence_with_count = presence.replace("{guild_count}", str(len(bot.guilds)))
+        delay = config['PRESENCES_CHANGE_DELAY']
+        await bot.change_presence(activity=discord.Game(name=presence_with_count))
+        await asyncio.sleep(delay)
 
  
 # Set up the instructions
@@ -154,7 +155,6 @@ async def on_message(message):
 
         if internet_access:
             instructions += f"""\n\nIt's currently {current_time}, You have real-time information and the ability to browse the internet."""
-        if internet_access:
             await message.add_reaction("🔎")
         channel_id = message.channel.id
         key = f"{message.author.id}-{channel_id}"
@@ -163,14 +163,14 @@ async def on_message(message):
             message_history[key] = []
 
         message_history[key] = message_history[key][-MAX_HISTORY:]
-            
+
         search_results = await search(message.content)
-            
+
         message_history[key].append({"role": "user", "content": message.content})
         history = message_history[key]
 
         async with message.channel.typing():
-            response = await asyncio.to_thread(generate_response, instructions=instructions, search=search_results, history=history)
+            response = await generate_response(instructions=instructions, search=search_results, history=history)
             if internet_access:
                 await message.remove_reaction("🔎", bot.user)
         message_history[key].append({"role": "assistant", "name": personaname, "content": response})
@@ -251,10 +251,7 @@ async def toggleactive(ctx, persona: app_commands.Choice[str] = instruction[inst
             json.dump(active_channels, f, indent=4)
         await ctx.send(f"{ctx.channel.mention} {current_language['toggleactive_msg_1']}", delete_after=3)
     else:
-        if persona.value:
-            active_channels[channel_id] = persona.value
-        else:
-            active_channels[channel_id] = persona
+        active_channels[channel_id] = persona.value if persona.value else persona
         with open("channels.json", "w", encoding='utf-8') as f:
             json.dump(active_channels, f, indent=4)
         await ctx.send(f"{ctx.channel.mention} {current_language['toggleactive_msg_2']}", delete_after=3)
@@ -269,10 +266,10 @@ async def clear(ctx):
     try:
         message_history[key].clear()
     except Exception as e:
-        await ctx.send(f"⚠️ There is no message history to be cleared", delete_after=2)
+        await ctx.send("⚠️ There is no message history to be cleared", delete_after=2)
         return
-    
-    await ctx.send(f"Message history has been cleared", delete_after=4)
+
+    await ctx.send("Message history has been cleared", delete_after=4)
 
 
 @commands.guild_only()
@@ -317,16 +314,13 @@ async def clear(ctx):
 @commands.guild_only()
 async def imagine(ctx, prompt: str, model: app_commands.Choice[str], sampler: app_commands.Choice[str], negative: str = None, seed: int = None):
     for word in prompt.split():
-        if word in blacklisted_words:
-            is_nsfw = True
-        else:
-            is_nsfw = False
+        is_nsfw = word in blacklisted_words
     if seed is None:
         seed = random.randint(10000, 99999)
     await ctx.defer()
-    
+
     model_uid = Model[model.value].value[0]
-    
+
     if is_nsfw and not ctx.channel.nsfw:
         await ctx.send(f"⚠️ You can create NSFW images in NSFW channels only\n To create NSFW image first create a age ristricted channel ", delete_after=30)
         return
@@ -334,13 +328,13 @@ async def imagine(ctx, prompt: str, model: app_commands.Choice[str], sampler: ap
         imagefileobj = sdxl(prompt)
     else:
         imagefileobj = await generate_image_prodia(prompt, model_uid, sampler.value, seed, negative)
-    
+
     if is_nsfw:
         img_file = discord.File(imagefileobj, filename="image.png", spoiler=True, description=prompt)
         prompt = f"||{prompt}||"
     else:
         img_file = discord.File(imagefileobj, filename="image.png", description=prompt)
-        
+
     if is_nsfw:
         embed = discord.Embed(color=0xFF0000)
     else:
@@ -351,8 +345,8 @@ async def imagine(ctx, prompt: str, model: app_commands.Choice[str], sampler: ap
         embed.add_field(name='📝 Negative Prompt', value=f'- {negative}', inline=False)
     embed.add_field(name='🤖 Model', value=f'- {model.value}', inline=True)
     embed.add_field(name='🧬 Sampler', value=f'- {sampler.value}', inline=True)
-    embed.add_field(name='🌱 Seed', value=f'- {str(seed)}', inline=True)
-    
+    embed.add_field(name='🌱 Seed', value=f'- {seed}', inline=True)
+
     if is_nsfw:
         embed.add_field(name='🔞 NSFW', value=f'- {str(is_nsfw)}', inline=True)
 
@@ -384,8 +378,7 @@ async def imagine_dalle(ctx, prompt, model: app_commands.Choice[str], size: app_
     await ctx.defer()
     model = model.value
     size = size.value
-    if num_images > 4:
-        num_images = 4
+    num_images = min(num_images, 4)
     imagefileobjs = await dall_e_gen(model, prompt, size, num_images)
     await ctx.send(f'🎨 Generated Image by {ctx.author.name}')
     for imagefileobj in imagefileobjs:
@@ -451,7 +444,7 @@ async def gif(ctx, category: app_commands.Choice[str]):
 @bot.hybrid_command(name="askgpt4", description="Ask gpt4 a question")
 async def ask(ctx, prompt: str):
     await ctx.defer()
-    response = await asyncio.to_thread(generate_gpt4_response, prompt=prompt)
+    response = await generate_gpt4_response(prompt=prompt)
     for chunk in split_response(response):
         await ctx.send(chunk, allowed_mentions=discord.AllowedMentions.none(), suppress_embeds=True)
 
@@ -489,7 +482,7 @@ async def support(ctx):
 async def server(ctx):
     await ctx.defer(ephemeral=True)
     embed = discord.Embed(title="Server List", color=discord.Color.blue())
-    
+
     for guild in bot.guilds:
         permissions = guild.get_member(bot.user.id).guild_permissions
         if permissions.administrator:
@@ -499,7 +492,7 @@ async def server(ctx):
             invite = await guild.text_channels[0].create_invite(max_uses=1)
             embed.add_field(name=guild.name, value=f"[Join Server]({invite})", inline=True)
         else:
-            embed.add_field(name=guild.name, value=f"*[No invite permission]*", inline=True)
+            embed.add_field(name=guild.name, value="*[No invite permission]*", inline=True)
 
     await ctx.send(embed=embed, ephemeral=True)
     
@@ -512,7 +505,7 @@ async def on_command_error(ctx, error):
         await ctx.send(f"{ctx.author.mention} Only the owner of the bot can use this command.")
 
 if detect_replit():
-    from utilities.replit_flask_runner import run_flask_in_thread
+    from bot_utilities.replit_flask_runner import run_flask_in_thread
     run_flask_in_thread()
 if __name__ == "__main__":
     bot.run(TOKEN)

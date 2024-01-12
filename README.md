@@ -1,9 +1,6 @@
 # Discord AI Chatbot 🤖
 #### Your Discord AI Companion!
 
-![Image](https://cdn.discordapp.com/attachments/1119920576417513472/1127122563982688296/image.png)
-![Image](https://cdn.discordapp.com/attachments/1119920576417513472/1127134209169969253/image.png)
-
 <div align="center">
   <a href="https://discord.gg/6MT3CZauT8">
     <img src="https://discordapp.com/api/guilds/1110950079390547968/widget.png?style=banner2">
@@ -149,7 +146,7 @@ python3.10 -m pip install -r requirements.txt
 
 Follow these steps:
 
-1. Join the Discord server by clicking on the following invite link: [CHIMERA GPT](https://discord.gg/2DmMUVSvSh)
+1. Join the Discord server by clicking on the following invite link: [NAGA AI](https://discord.naga.ac/)
 2. Once you have joined the server, run the `/key get` command in any text channel.
 3. This command will provide you with a reverse OpenAI key.
 
@@ -222,6 +219,10 @@ sudo zypper update -y && sudo zypper install -y docker-compose
 ```
 sudo docker-compose up --build
 ```
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=mishalhossin/Discord-AI-Chatbot&type=Timeline)](https://star-history.com/#mishalhossin/Discord-AI-Chatbot&Timeline)
 
 ### Lovely Contributors : 
 
